@@ -1,6 +1,17 @@
 console.log("executing script")
 
 
+function grabPagesId(){
+
+}
+
+function grabPagesClass(){
+
+}
+
+function grabPagesContainer(){
+
+}
 
 function grabPages(){
     let pages = []
@@ -24,9 +35,100 @@ function grabPages(){
         }
     })
 
-    pages.sort((a, b) => a.pageNum - b.pageNum)
+    // pages.sort((a, b) => a.pageNum - b.pageNum)
 
     return pages;
+}
+
+function grabNextAndPrev(){
+    let prev = null;
+    let next = null;
+    let type = null; // button or a tag
+
+    function recurse(element, calls){
+        if (calls > 5) return null;
+        console.log(element)
+
+        if (element.tagName == "BUTTON"){
+            return element
+        }
+        else {
+            return recurse(element.parentElement, calls + 1)
+        }
+    }
+
+    let possibleATag = document.querySelectorAll("a")
+    possibleATag.forEach((a)=>{
+        // check if already found
+        if (next != null && prev != null) return;
+
+        // check for obvious attribute identifyer
+        if (a.outerHTML.match(/(N|n)ext/)){
+            next = a.href
+            type = 'A'
+            return
+        }
+        else if (a.outerHTML.match(/(p|p)rev/)){
+            prev = a.href
+            type = "A"
+            return
+        }
+
+        // dissect href
+        let match = a.href.match(/chapters?(-|\/)?\d\d?\d?\d?/)
+        if (match){
+            console.log(a)
+            let newChapterNum = match[0].replace(/chapters?(-|\/)?/,"")
+            newChapterNum = parseInt(newChapterNum)
+
+            let currentChapterNum = window.location.pathname.match(/chapters?(-|\/)?\d\d?\d?\d?/)[0]
+            currentChapterNum = currentChapterNum.replace(/chapters?(-|\/)?/,"")
+            currentChapterNum = parseInt(currentChapterNum)
+            
+            console.log("current: ", currentChapterNum)
+            console.log("new: ", newChapterNum)
+            if (currentChapterNum < newChapterNum){
+                console.log("next: ", a)
+                next = a.href
+                type = "A"
+            }
+            else if (currentChapterNum > newChapterNum){
+                console.log("prev: ", a)
+                prev = a.href
+                type = "A"
+            }
+        }
+
+    })
+
+    if (next != null && prev != null) return { prev: prev, next: next, type: type };
+
+
+    // check for button navigation (less common)
+    document.querySelectorAll("span").forEach(span => {
+        if (next != null && prev != null) return;
+
+        if (span.outerHTML.match(/(N|n)(ext|EXT)/)){
+            let success = recurse(span, 0)
+            if (success){
+                next = success
+                type = "BUTTON"
+            }
+        }
+        else if (span.outerHTML.match(/(P|p)(rev|REV)/)){
+            let success = recurse(span, 0)
+            if (success){
+                prev = success
+                type = "BUTTON"
+            }
+        }
+    })
+
+    if (type == null){
+        console.log("no navigation found")
+    }
+
+    return { prev: prev, next: next, type: type }
 }
 
 
@@ -44,6 +146,20 @@ function createMangaImgs(pages){
     img.style.width = "auto"
     container.appendChild(img)
 
+    // page count
+    let pageCounter = document.createElement("div")
+    pageCounter.style.zIndex = "999999999"
+    pageCounter.style.position = "fixed"
+    pageCounter.style.top = "0"
+    pageCounter.style.right = "0"
+    pageCounter.style.color = "white"
+    container.appendChild(pageCounter)
+
+    function updatePageCount(page, pages){
+        return`${page}/${pages}`
+    }
+    pageCounter.textContent = updatePageCount(index+1, pages.length)
+
     function controls(event) {
         if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
             event.preventDefault()   
@@ -60,6 +176,8 @@ function createMangaImgs(pages){
             img.src = pages[index].src
             img.alt = pages[index].alt
         }
+
+        pageCounter.textContent = updatePageCount(index+1, pages.length)
     }
 
     document.addEventListener("keydown", controls, true)
@@ -91,27 +209,6 @@ function createManhwaImgs(pages){
     container.appendChild(scrollArea);
 
     return container
-    
-    // container.style.position = "relative";   // not fixed
-    // container.style.height = "auto";
-    // container.style.minHeight = "100vh";     // so at least fills screen
-    // container.style.overflowY = "scroll";
-    // container.style.alignItems = "center";
-    
-
-    // for (let page of pages){
-    //     let img = document.createElement("img")
-    //     img.id = `(manhwa)page ${page.pageNum}`
-    //     img.src = page.src
-    //     img.alt = page.alt
-
-    //     img.style.width = "400px"
-    //     img.style.height = "auto"
-
-    //     container.appendChild(img)
-    // }
-
-    // return container
 }
 
 function createContainer(){
@@ -193,6 +290,9 @@ function createSideBar(){
         let mangaContainer = document.querySelector("#mangaContainer")
         let manhwaContainer = document.querySelector("#manhwaContainer")
 
+        upDownView.style.border = "2px solid #83d8fc"
+        document.querySelector("#leftToRightView").style.border = "none"
+
         mangaContainer.style.display = "none"
         manhwaContainer.style.display = "flex"
     }
@@ -203,13 +303,66 @@ function createSideBar(){
     leftToRightView.style.cssText = `appearance:none; border:0; border-radius:14px; 
                                 padding:12px 14px; text-align:left;
                                 background:#0f1620; color:${cssVars.text}; 
-                                cursor:pointer; font-weight:600;`
+                                cursor:pointer; font-weight:600; border: 2px solid #83d8fc`
     leftToRightView.onclick = () => {
         let mangaContainer = document.querySelector("#mangaContainer")
         let manhwaContainer = document.querySelector("#manhwaContainer")
 
+        leftToRightView.style.border = "2px solid #83d8fc"
+        document.querySelector("#upDownView").style.border = "none"
+
         mangaContainer.style.display = "flex"
         manhwaContainer.style.display = "none"
+    }
+
+    let navContainer = document.createElement("div")
+    navContainer.id = "navContainer"
+    let prevButton = document.createElement("button")
+    prevButton.id = "prevButton"
+    prevButton.textContent = "Prev"
+    prevButton.style.cssText = `appearance:none; border:0; border-radius:14px; 
+                                padding:12px 14px; text-align:left;
+                                background:#0f1620; color:${cssVars.text}; 
+                                cursor:pointer; font-weight:600; flex: 1;
+                                width: 50%; text-align: center;`
+    
+    let nextButton = document.createElement("button")
+    nextButton.id = "nextButton"
+    nextButton.textContent = "Next"
+    nextButton.style.cssText = `appearance:none; border:0; border-radius:14px; 
+                                padding:12px 14px; text-align:left;
+                                background:#0f1620; color:${cssVars.text}; 
+                                cursor:pointer; font-weight:600; flex: 1;
+                                width: 50%; text-align: center;`
+    navContainer.appendChild(prevButton)
+    navContainer.appendChild(nextButton)
+
+    const aTagOnClick = (location) => {
+        chrome.runtime.sendMessage('runMain', (response)=>{
+            console.log(response)
+        })
+        window.location.href = location
+    }
+
+    const buttonOnClick = button => {
+        chrome.runtime.sendMessage('runMain', (response)=>{
+            console.log(response)
+        })
+        button.click()
+    }
+
+    let navOptions = null
+    navOptions = grabNextAndPrev()
+    console.log("nav options: ", navOptions)
+    let success = navOptions != null
+
+    if (success && navOptions.type == 'A'){
+        prevButton.onclick = () => aTagOnClick(navOptions.prev)
+        nextButton.onclick = () => aTagOnClick(navOptions.next)
+    }
+    else if (success && navOptions.type == "BUTTON"){
+        prevButton.onclick = () => buttonOnClick(navOptions.prev)
+        nextButton.onclick = () => buttonOnClick(navOptions.next)
     }
 
     let closeReader = document.createElement("button")
@@ -265,6 +418,9 @@ function createSideBar(){
     sidebar.appendChild(header)
     sidebar.appendChild(upDownView)
     sidebar.appendChild(leftToRightView)
+    if (success){
+        sidebar.appendChild(navContainer)
+    }
     sidebar.appendChild(closeMenu)
     sidebar.appendChild(closeReader)
     document.querySelector("#reader").appendChild(openMenu)
@@ -276,7 +432,7 @@ function createSideBar(){
 function main(){
     console.log("grabbing pages...")
     let pages = grabPages()
-    if (!pages){
+    if (pages.length == 0){
         alert("could not detect pages :(")
 
         // check if instance is already open

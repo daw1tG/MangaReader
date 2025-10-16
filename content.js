@@ -1,22 +1,8 @@
 console.log("executing script")
 
-
-function grabPagesId(){
-
-}
-
-function grabPagesClass(){
-
-}
-
-function grabPagesContainer(){
-
-}
-
-function grabPages(){
+function grabPagesAlt(imgs){
     let pages = []
-
-    document.querySelectorAll("img").forEach(img => {
+    imgs.forEach(img => {
         let alt = img.getAttribute("alt");
         if (!alt){
             return;
@@ -35,9 +21,63 @@ function grabPages(){
         }
     })
 
-    // pages.sort((a, b) => a.pageNum - b.pageNum)
+    return pages.length > 0 ? pages:false;
+}
 
-    return pages;
+function grabPagesId(imgs){
+    let pages = []
+
+    imgs.forEach(img => {
+
+    })
+
+    return pages.length > 0 ? pages:false;
+}
+
+function grabPagesClass(imgs){
+    let pages = []
+
+    imgs.forEach(img => {
+        
+    })
+
+    return pages.length > 0 ? pages:false;
+}
+
+function grabPagesSrc(imgs){
+    let pages = []
+
+    imgs.forEach(img => {
+        
+    })
+
+    return pages.length > 0 ? pages:false;
+}
+
+function grabPages(){
+    let imgs = document.querySelectorAll("img")
+
+    let alt = grabPagesAlt(imgs)
+    if (alt){
+        return alt
+    }
+
+    let id = grabPagesId(imgs)
+    if (id){
+        return id
+    }
+    
+    let Class = grabPagesClass(imgs)
+    if (Class){
+        return Class
+    }
+
+    let src = grabPagesSrc(imgs)
+    if (src){
+        return src
+    }
+
+    return [];
 }
 
 function grabNextAndPrev(){
@@ -63,12 +103,13 @@ function grabNextAndPrev(){
         if (next != null && prev != null) return;
 
         // check for obvious attribute identifyer
-        if (a.outerHTML.match(/(N|n)ext/)){
+        let cleaned = a.outerHTML.replace(a.innerHTML, "")
+        if (cleaned.match(/next/i)){
             next = a.href
             type = 'A'
             return
         }
-        else if (a.outerHTML.match(/(p|p)rev/)){
+        else if (cleaned.match(/prev/i)){
             prev = a.href
             type = "A"
             return
@@ -105,20 +146,24 @@ function grabNextAndPrev(){
 
 
     // check for button navigation (less common)
-    document.querySelectorAll("span").forEach(span => {
+    document.querySelectorAll("button > span").forEach(span => {
         if (next != null && prev != null) return;
 
         if (span.outerHTML.match(/(N|n)(ext|EXT)/)){
-            let success = recurse(span, 0)
-            if (success){
-                next = success
+            let button = recurse(span, 0)
+            if (!button)return;
+            style = window.getComputedStyle(button)
+            if (style.display != "none" && !button.disabled){
+                next = button
                 type = "BUTTON"
             }
         }
         else if (span.outerHTML.match(/(P|p)(rev|REV)/)){
-            let success = recurse(span, 0)
-            if (success){
-                prev = success
+            let button = recurse(span, 0)
+            if (!button)return;
+            style = window.getComputedStyle(button)
+            if (style.display != "none" && !button.disabled){
+                prev = button
                 type = "BUTTON"
             }
         }
@@ -291,7 +336,9 @@ function createSideBar(){
         let manhwaContainer = document.querySelector("#manhwaContainer")
 
         upDownView.style.border = "2px solid #83d8fc"
+        upDownView.setAttribute("inView", "true")
         document.querySelector("#leftToRightView").style.border = "none"
+        document.querySelector("#leftToRightView").setAttribute("inView", "false")
 
         mangaContainer.style.display = "none"
         manhwaContainer.style.display = "flex"
@@ -309,7 +356,10 @@ function createSideBar(){
         let manhwaContainer = document.querySelector("#manhwaContainer")
 
         leftToRightView.style.border = "2px solid #83d8fc"
+        leftToRightView.setAttribute("inView", "true")
+
         document.querySelector("#upDownView").style.border = "none"
+        document.querySelector("#upDownView").setAttribute("inView", "false")
 
         mangaContainer.style.display = "flex"
         manhwaContainer.style.display = "none"
@@ -341,6 +391,16 @@ function createSideBar(){
         chrome.runtime.sendMessage('runMain', (response)=>{
             console.log(response)
         })
+
+        let orientation = { manga:true, manwha: false }
+        if (document.querySelector("#upDownView").getAttribute("inView") == "true"){
+            orientation.manga = false
+            orientation.manhwa = true
+        }
+        
+        chrome.runtime.sendMessage(orientation, (response)=>{
+            console.log(response)
+        })
         window.location.href = location
     }
 
@@ -348,7 +408,23 @@ function createSideBar(){
         chrome.runtime.sendMessage('runMain', (response)=>{
             console.log(response)
         })
-        button.click()
+
+        let orientation = { manga:true, manhwa: false }
+        if (document.querySelector("#upDownView").getAttribute("inView") == "true"){
+            orientation.manga = false
+            orientation.manhwa = true
+        }
+        
+        chrome.runtime.sendMessage(orientation, (response)=>{
+            console.log(response)
+        })
+        try{
+            button.click()
+        }
+        catch(err){
+            alert("error navigating to next page")
+        }
+        
     }
 
     let navOptions = null
@@ -405,6 +481,8 @@ function createSideBar(){
     closeReader.onclick = () => {
         let mangaContainer = document.querySelector("#mangaContainer")
         let manhwaContainer = document.querySelector("#manhwaContainer")
+
+        chrome.runtime.sendMessage("closed", (response)=>{console.log(response)})
 
         mangaContainer.remove()
         manhwaContainer.remove()
@@ -467,13 +545,22 @@ function main(){
 
     console.log("appending mangaContainer...")
     container.appendChild(mangaContainer)
-     mangaContainer.style.display = "flex"
+    mangaContainer.style.display = "flex"
+    mangaContainer.setAttribute("inView", "true")
     console.log("success!")
 
     console.log("appending manhwaContainer...")
     container.appendChild(manhwaContainer)
     manhwaContainer.style.display = "none"
+    manhwaContainer.setAttribute("inView", "false")
     console.log("success!")
+
+    chrome.runtime.sendMessage('orientation', result => {
+        console.log("orientation: ", result)
+        if (result == 'manhwa'){
+            document.querySelector("#upDownView").click()
+        }
+    })
 }
 
 main()

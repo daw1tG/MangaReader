@@ -42,7 +42,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 	if (changeInfo.status !== "complete") return;
 	console.log("changeinfo: ", changeInfo)
-	//if (!/(chapter|series|manga)/i.test(changeInfo.url)) return;
 	chrome.storage.session.get(["runMain"]).then(result => {
 		if(result.runMain){     
 			chrome.storage.session.set({runMain: false}) 
@@ -51,7 +50,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 					target: {tabId: tabId},
 					files: ['content.js']
 				});
-			}, 750)
+			}, 1000)
 		} 
 	})
 

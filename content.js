@@ -4,17 +4,18 @@ function grabPagesAlt(imgs){
     let pages = []
     imgs.forEach(img => {
         let alt = img.getAttribute("alt");
+        console.log("alt: ", alt)
         if (!alt){
             return;
         }
-        if (alt.match(/(P|p)age \d\d?\d?/)){
+        if (alt.match(/(page|chapter) \d\d?\d?/i)){
             console.log("pushing: ", img)
 
             // get page number
-            let pageNum = img.alt.match(/(P|p)age \d\d?\d?/)[0]
+            let pageNum = img.alt.match(/(page|chapter) \d\d?\d?/i)[0]
             console.log(img.alt, ": ", pageNum)
 
-            pageNum = pageNum.replace(/(P|p)age /, "")
+            pageNum = pageNum.replace(/(page|chapter) /i, "")
             pageNum = parseInt(pageNum)
             // store img data
             pages.push({src: img.src, alt: img.alt, pageNum: pageNum})
@@ -28,7 +29,16 @@ function grabPagesId(imgs){
     let pages = []
 
     imgs.forEach(img => {
+        let id = img.getAttribute("id");
+        console.log("id: ", id)
+        if (!id){
+            return;
+        }
+        if (id.match(/(image|page)(-|\/| )\d\d?\d?/i)){
+            let pageNum = parseInt(id.replace(/(image|page)(-|\/| )/i, ""))
 
+            pages.push({src: img.src, alt: img.alt, pageNum: pageNum})
+        }
     })
 
     return pages.length > 0 ? pages:false;
@@ -38,7 +48,16 @@ function grabPagesClass(imgs){
     let pages = []
 
     imgs.forEach(img => {
-        
+        let class_ = img.getAttribute("class");
+        console.log("class_: ", class_)
+        if (!class_){
+            return;
+        }
+        if (class_.match(/(image|page)(-|\/| )\d\d?\d?/i)){
+            let pageNum = parseInt(class_.replace(/(image|page)(-|\/| )/i, ""))
+
+            pages.push({src: img.src, alt: img.alt, pageNum: pageNum})
+        }
     })
 
     return pages.length > 0 ? pages:false;
@@ -48,7 +67,11 @@ function grabPagesSrc(imgs){
     let pages = []
 
     imgs.forEach(img => {
-        
+        const regex = /https?:\/\/[a-zA-Z0-9.\-]+\/[a-zA-Z0-9_\/\- ]+\.(webp|jpg|jpeg|png)/i;
+
+        if (img.src.match(regex)){
+            pages.push({src: img.src, alt: img.alt, pageNum: null})
+        }
     })
 
     return pages.length > 0 ? pages:false;
@@ -99,21 +122,21 @@ function grabNextAndPrev(){
 
     let possibleATag = document.querySelectorAll("a")
     possibleATag.forEach((a)=>{
-        // check if already found
-        if (next != null && prev != null) return;
+        // // check if already found
+        // if (next != null && prev != null) return;
 
-        // check for obvious attribute identifyer
-        let cleaned = a.outerHTML.replace(a.innerHTML, "")
-        if (cleaned.match(/next/i)){
-            next = a.href
-            type = 'A'
-            return
-        }
-        else if (cleaned.match(/prev/i)){
-            prev = a.href
-            type = "A"
-            return
-        }
+        // // check for obvious attribute identifyer <-- sometimes grabs the latest chapter, depending on the site
+        // let cleaned = a.outerHTML.replace(a.innerHTML, "")
+        // if (cleaned.match(/next/i)){
+        //     next = a.href
+        //     type = 'A'
+        //     return
+        // }
+        // else if (cleaned.match(/prev/i)){
+        //     prev = a.href
+        //     type = "A"
+        //     return
+        // }
 
         // dissect href
         let match = a.href.match(/chapters?(-|\/)?\d\d?\d?\d?/)
@@ -285,6 +308,39 @@ function createContainer(){
 
     return container
 }
+function createLoadingScreen(){
+    const styleSheet = document.createElement('style')
+    styleSheet.innerHTML = `
+                            .loading::after {
+                                content: '';
+                                position: absolute;
+                                inset: 0;
+                                z-index: 999;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            }
+
+                            .loading::before {
+                                content: '';
+                                position: absolute;
+                                width: 40px;
+                                height: 40px;
+                                top: 50%;
+                                left: 50%;
+                                translate: -50% -50%;
+                                border: 4px solid #ccc;
+                                border-top-color: #333;
+                                border-radius: 50%;
+                                animation: spin 0.8s linear infinite;
+                                z-index: 1000;
+                            }
+
+                            @keyframes spin {
+                                to { transform: rotate(360deg); }
+                            }`
+    document.head.appendChild(styleSheet)
+}
 
 function createSideBar(){
     let cssVars = {
@@ -387,42 +443,64 @@ function createSideBar(){
     navContainer.appendChild(prevButton)
     navContainer.appendChild(nextButton)
 
+    function trySendMessage(message, sendResponse, stack=0){
+        try{
+            if (stack > 10) return
+            chrome.runtime.sendMessage(message, sendResponse)
+            return true;
+        }
+        catch (err){
+            console.log("failure to send message to service worker, trying again...")
+            setTimeout(()=>trySendMessage(message,sendResponse, stack++), 100)
+        }
+    }
+
     const aTagOnClick = (location) => {
-        chrome.runtime.sendMessage('runMain', (response)=>{
+        let result = trySendMessage('runMain', (response)=>{
             console.log(response)
         })
 
-        let orientation = { manga:true, manwha: false }
-        if (document.querySelector("#upDownView").getAttribute("inView") == "true"){
-            orientation.manga = false
-            orientation.manhwa = true
+        if (!result){
+            alert("Error navigating to next page, please close reader")
+            return
+        }
+
+        let orientation = { manga:false, manhwa: true }
+        if (document.querySelector("#leftToRightView").getAttribute("inView") == "true"){
+            orientation.manga = true
+            orientation.manhwa = false
         }
         
-        chrome.runtime.sendMessage(orientation, (response)=>{
+        trySendMessage(orientation, (response)=>{
             console.log(response)
         })
         window.location.href = location
     }
 
     const buttonOnClick = button => {
-        chrome.runtime.sendMessage('runMain', (response)=>{
+        let result = trySendMessage('runMain', (response)=>{
             console.log(response)
         })
 
-        let orientation = { manga:true, manhwa: false }
-        if (document.querySelector("#upDownView").getAttribute("inView") == "true"){
-            orientation.manga = false
-            orientation.manhwa = true
+        if (!result){
+            alert("Error navigating to next page, please close reader")
+            return
+        }
+
+        let orientation = { manga:false, manhwa: true }
+        if (document.querySelector("#leftToRightView").getAttribute("inView") == "true"){
+            orientation.manga = true
+            orientation.manhwa = false
         }
         
-        chrome.runtime.sendMessage(orientation, (response)=>{
+        trySendMessage(orientation, (response)=>{
             console.log(response)
         })
         try{
             button.click()
         }
         catch(err){
-            alert("error navigating to next page")
+            alert("error navigating to next page, , please close reader")
         }
         
     }
@@ -466,7 +544,7 @@ function createSideBar(){
 
     let closeMenu = document.createElement("button")
     closeMenu.id = "closeMenu"
-    closeMenu.textContent = "Close Menu"
+    closeMenu.textContent = "Hide Menu"
     closeMenu.style.cssText =  `appearance:none; border:0; border-radius:14px; 
                                 padding:12px 14px; text-align:left;
                                 background:#0f1620; color:${cssVars.text}; 
@@ -507,7 +585,60 @@ function createSideBar(){
     //document.body.appendChild(sidebar)
 }
 
-function main(){
+function blockPopups(){
+    const targetNode = document.querySelector("html")
+    const observer = new MutationObserver((mutationList, observer) => {
+        while (targetNode.childNodes.length > 2){
+            let tag = targetNode.childNodes[targetNode.childNodes.length - 1]
+            if (tag.nodeName === "HEAD" || tag.nodeName === "BODY"){break}
+            console.log(`${targetNode.childNodes.length} \n ${tag.nodeName} \n ${tag.outerHTML}`)
+            tag.remove()
+        }
+    })
+
+    
+    observer.observe(targetNode, { childList: true})
+}
+
+function scrollToBottom(){
+    return new Promise((resolve, reject) => {
+        let last = document.querySelectorAll('div')[document.querySelectorAll('div').length-1]
+        last.scrollIntoView()
+
+        const atBottom = ()=>{ return Math.abs(window.scrollY-document.body.scrollHeight) <= 1000}
+
+        const check = setInterval(()=>{
+            if (atBottom()){
+                clearInterval(check)
+                resolve(true)
+            }
+             window.scrollTo({ top: document.body.scrollHeight, left: 0 });
+        }, 50)
+        
+    })
+}
+
+
+async function main(){
+    let container = createContainer()
+    container.id = "reader"
+    document.body.appendChild(container)
+
+    createLoadingScreen()
+    container.classList.add('loading')
+
+    console.log("creating sidebar...")
+    let sidebar = createSideBar()
+    console.log("success!")
+
+    console.log("appending to document...")
+    console.log("appending sidebar...")
+    container.appendChild(sidebar)
+    console.log("success!")
+
+
+    await scrollToBottom()
+
     console.log("grabbing pages...")
     let pages = grabPages()
     if (pages.length == 0){
@@ -522,6 +653,10 @@ function main(){
     }
     console.log("success!", pages)
 
+    container.classList.remove('loading')
+
+    window.scrollTo({ top: 0, left: 0 })
+
     console.log("creating manga container...")
     let mangaContainer = createMangaImgs(pages)
     console.log("success!")
@@ -530,37 +665,41 @@ function main(){
     let manhwaContainer = createManhwaImgs(pages)
     console.log("success!")
 
-    let container = createContainer()
-    container.id = "reader"
-    document.body.appendChild(container)
+    // let container = createContainer()
+    // container.id = "reader"
+    // document.body.appendChild(container)
 
-    console.log("creating sidebar...")
-    let sidebar = createSideBar()
-    console.log("success!")
+    // console.log("creating sidebar...")
+    // let sidebar = createSideBar()
+    // console.log("success!")
 
-    console.log("appending to document...")
-    console.log("appending sidebar...")
-    container.appendChild(sidebar)
-    console.log("success!")
+    // console.log("appending to document...")
+    // console.log("appending sidebar...")
+    // container.appendChild(sidebar)
+    // console.log("success!")
 
     console.log("appending mangaContainer...")
     container.appendChild(mangaContainer)
-    mangaContainer.style.display = "flex"
-    mangaContainer.setAttribute("inView", "true")
+    mangaContainer.style.display = "none"
+    mangaContainer.setAttribute("inView", "false")
     console.log("success!")
 
     console.log("appending manhwaContainer...")
     container.appendChild(manhwaContainer)
-    manhwaContainer.style.display = "none"
-    manhwaContainer.setAttribute("inView", "false")
+    manhwaContainer.style.display = "flex"
+    manhwaContainer.setAttribute("inView", "true")
     console.log("success!")
+
+    document.querySelector("#upDownView").click()
 
     chrome.runtime.sendMessage('orientation', result => {
         console.log("orientation: ", result)
-        if (result == 'manhwa'){
-            document.querySelector("#upDownView").click()
+        if (result == 'manga'){
+            document.querySelector("#leftToRightView").click()
         }
     })
+
+    blockPopups()
 }
 
 main()

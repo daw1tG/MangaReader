@@ -139,24 +139,24 @@ function grabNextAndPrev(){
         // }
 
         // dissect href
-        let match = a.href.match(/chapters?(-|\/)?\d\d?\d?\d?/)
+        let match = a.href.match(/chapters?(-|\/)?\d\d?\d?\d?$/)
         if (match){
             console.log(a)
             let newChapterNum = match[0].replace(/chapters?(-|\/)?/,"")
             newChapterNum = parseInt(newChapterNum)
 
-            let currentChapterNum = window.location.pathname.match(/chapters?(-|\/)?\d\d?\d?\d?/)[0]
+            let currentChapterNum = window.location.pathname.match(/chapters?(-|\/)?\d\d?\d?\d?$/)[0]
             currentChapterNum = currentChapterNum.replace(/chapters?(-|\/)?/,"")
             currentChapterNum = parseInt(currentChapterNum)
             
             console.log("current: ", currentChapterNum)
             console.log("new: ", newChapterNum)
-            if (currentChapterNum < newChapterNum){
+            if (!next && currentChapterNum < newChapterNum){
                 console.log("next: ", a)
                 next = a.href
                 type = "A"
             }
-            else if (currentChapterNum > newChapterNum){
+            else if (!prev && currentChapterNum > newChapterNum){
                 console.log("prev: ", a)
                 prev = a.href
                 type = "A"
@@ -602,7 +602,8 @@ function blockPopups(){
 
 function scrollToBottom(){
     return new Promise((resolve, reject) => {
-        let last = document.querySelectorAll('div')[document.querySelectorAll('div').length-1]
+        let divs =document.querySelectorAll('div')
+        let last = divs[divs.length-1]
         last.scrollIntoView()
 
         const atBottom = ()=>{ return Math.abs(window.scrollY-document.body.scrollHeight) <= 1000}

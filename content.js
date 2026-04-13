@@ -308,9 +308,74 @@ function createContainer(){
 
     return container
 }
-function createLoadingScreen(){
+function createStyleSheet(){
+    let cssVars = {
+        bg: "#0b1016", // page background 
+        panel: "#121a23", // cards/panels 
+        accent: "#4da3ff", // accent color 
+        muted: "#9fb3c8", // secondary text 
+        text: "#e8f0f8", // primary text 
+        shadow: "0 10px 25px rgba(0,0,0,.35)",
+        radius: "18px"
+    }
     const styleSheet = document.createElement('style')
     styleSheet.innerHTML = `
+
+                            .container {
+                                position = fixed;
+                                top = 0;
+                                left = 0;
+                                width = 100%;
+                                height = 100vh;
+                                background-color = ${cssVars.bg};
+                                opacity = 1;
+                                z-index = 99999999;
+                                display = flex;
+                                flex-direction = column;
+                                justify-content = center;
+                                align-items = center;
+                            }
+
+                            .sidebar {
+                                width = 260px;
+                                height = 720px;
+                                margin = 15px;
+                                flex = 0 0 260px;
+                                display = flex;
+                                flex-direction = column;
+                                border-radius = ${cssVars.radius};
+                                box-shadow = ${cssVars.shadow};
+                                gap = 8px;
+                                padding = 14px;
+                                position = fixed;
+                                top = 0;
+                                left = 0;
+                                z-index = 999999999;
+                                background-color = ${cssVars.panel};                           
+                            }
+
+                            .button {
+                                appearance:none; 
+                                border:0; 
+                                border-radius:14px; 
+                                padding:12px 14px;
+                                text-align:left;
+                                background:#0f1620; 
+                                color:${cssVars.text}; 
+                                cursor:pointer;
+                                font-weight:600;
+                            }
+                            
+                            .header{
+                                font-size = 14px;
+                                letter-spacing = .12em;
+                                text-transform = uppercase;
+                                color = ${cssVars.muted};
+                                margin = 2px 6px 8px;
+                            }
+
+                            /*loading screen*/
+
                             .loading::after {
                                 content: '';
                                 position: absolute;
@@ -560,7 +625,7 @@ function createSideBar(){
         let mangaContainer = document.querySelector("#mangaContainer")
         let manhwaContainer = document.querySelector("#manhwaContainer")
 
-        chrome.runtime.sendMessage("closed", (response)=>{console.log(response)})
+        trySendMessage("closed", (response)=>{console.log(response)})
 
         mangaContainer.remove()
         manhwaContainer.remove()
@@ -625,7 +690,7 @@ async function main(){
     container.id = "reader"
     document.body.appendChild(container)
 
-    createLoadingScreen()
+    createStyleSheet()
     container.classList.add('loading')
 
     console.log("creating sidebar...")

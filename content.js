@@ -1,5 +1,14 @@
 console.log("executing script")
 
+function removeDupePages(pages) {
+    const seen = new Set();
+    return pages.filter(page => {
+        if (seen.has(page.src)) return false;
+        seen.add(page.src);
+        return true;
+    });
+}
+
 function grabPagesAlt(imgs){
     let pages = []
     imgs.forEach(img => {
@@ -80,27 +89,13 @@ function grabPagesSrc(imgs){
 function grabPages(){
     let imgs = document.querySelectorAll("img")
 
-    let alt = grabPagesAlt(imgs)
-    if (alt){
-        return alt
-    }
+    let result = grabPagesAlt(imgs) 
+                 || grabPagesId(imgs) 
+                 || grabPagesClass(imgs) 
+                 || grabPagesSrc(imgs) 
+                 || [];
 
-    let id = grabPagesId(imgs)
-    if (id){
-        return id
-    }
-    
-    let Class = grabPagesClass(imgs)
-    if (Class){
-        return Class
-    }
-
-    let src = grabPagesSrc(imgs)
-    if (src){
-        return src
-    }
-
-    return [];
+    return removeDupePages(result);
 }
 
 function grabNextAndPrev(){
@@ -199,7 +194,6 @@ function grabNextAndPrev(){
     return { prev: prev, next: next, type: type }
 }
 
-
 function createMangaImgs(pages){
     let container = createContainer()
     container.id = "mangaContainer"
@@ -248,9 +242,26 @@ function createMangaImgs(pages){
         pageCounter.textContent = updatePageCount(index+1, pages.length)
     }
 
+    function updatePages(newPages){
+        pages.push(...newPages)
+        pageCounter.textContent = updatePageCount(index+1, pages.length)
+        console.log(pages)
+        console.log(pageCounter)
+    }
+
     document.addEventListener("keydown", controls, true)
 
-    return container
+    return { mangaContainer: container, updatePages: updatePages }
+}
+
+function createManhwaImgTag(page){
+    let img = document.createElement("img");
+    img.src = page.src;
+    img.alt = page.alt;
+    img.style.width = "400px";
+    img.style.height = "auto";
+
+    return img
 }
 
 function createManhwaImgs(pages){
@@ -258,6 +269,7 @@ function createManhwaImgs(pages){
     container.id = "manhwaContainer"
 
     let scrollArea = document.createElement("div");
+    scrollArea.id = 'scrollArea'
     scrollArea.style.display = "flex";
     scrollArea.style.flexDirection = "column";
     scrollArea.style.alignItems = "center";
@@ -266,17 +278,13 @@ function createManhwaImgs(pages){
     scrollArea.style.overflowY = "scroll";
 
     for (let page of pages) {
-        let img = document.createElement("img");
-        img.src = page.src;
-        img.alt = page.alt;
-        img.style.width = "400px";
-        img.style.height = "auto";
+        let img = createManhwaImgTag(page)
         scrollArea.appendChild(img);
     }
 
     container.appendChild(scrollArea);
 
-    return container
+    return { manhwaContainer: container, scrollArea }
 }
 
 function createContainer(){
@@ -322,36 +330,36 @@ function createStyleSheet(){
     styleSheet.innerHTML = `
 
                             .container {
-                                position = fixed;
-                                top = 0;
-                                left = 0;
-                                width = 100%;
-                                height = 100vh;
-                                background-color = ${cssVars.bg};
-                                opacity = 1;
-                                z-index = 99999999;
-                                display = flex;
-                                flex-direction = column;
-                                justify-content = center;
-                                align-items = center;
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100vh;
+                                background-color: ${cssVars.bg};
+                                opacity: 1;
+                                z-index: 99999999;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: center;
+                                align-items: center;
                             }
 
                             .sidebar {
-                                width = 260px;
-                                height = 720px;
-                                margin = 15px;
-                                flex = 0 0 260px;
-                                display = flex;
-                                flex-direction = column;
-                                border-radius = ${cssVars.radius};
-                                box-shadow = ${cssVars.shadow};
-                                gap = 8px;
-                                padding = 14px;
-                                position = fixed;
-                                top = 0;
-                                left = 0;
-                                z-index = 999999999;
-                                background-color = ${cssVars.panel};                           
+                                width: 260px;
+                                height: 720px;
+                                margin: 15px;
+                                flex: 0 0 260px;
+                                display: flex;
+                                flex-direction: column;
+                                border-radius: ${cssVars.radius};
+                                box-shadow: ${cssVars.shadow};
+                                gap: 8px;
+                                padding: 14px;
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                z-index: 999999999;
+                                background-color: ${cssVars.panel};                           
                             }
 
                             .button {
@@ -367,11 +375,11 @@ function createStyleSheet(){
                             }
                             
                             .header{
-                                font-size = 14px;
-                                letter-spacing = .12em;
-                                text-transform = uppercase;
-                                color = ${cssVars.muted};
-                                margin = 2px 6px 8px;
+                                font-size: 14px;
+                                letter-spacing: .12em;
+                                text-transform: uppercase;
+                                color: ${cssVars.muted};
+                                margin: 2px 6px 8px;
                             }
 
                             /*loading screen*/
@@ -650,6 +658,209 @@ function createSideBar(){
     //document.body.appendChild(sidebar)
 }
 
+function createNewSideBar(){
+    let sidebar = document.createElement("aside")
+    sidebar.id = "sidebar"
+    sidebar.classList.add("sidebar")
+
+    let header = document.createElement("h2")
+    header.id = "header"
+    header.textContent = "Layout Options"
+    header.classList.add("header")
+
+    let upDownView = document.createElement("button")
+    upDownView.id = "upDownView"
+    upDownView.textContent = "Read Up and Down"
+    upDownView.classList.add("button")
+
+    upDownView.onclick = () => {
+        let mangaContainer = document.querySelector("#mangaContainer")
+        let manhwaContainer = document.querySelector("#manhwaContainer")
+
+        upDownView.style.border = "2px solid #83d8fc"
+        upDownView.setAttribute("inView", "true")
+        document.querySelector("#leftToRightView").style.border = "none"
+        document.querySelector("#leftToRightView").setAttribute("inView", "false")
+
+        mangaContainer.style.display = "none"
+        manhwaContainer.style.display = "flex"
+    }
+
+    let leftToRightView = document.createElement("button")
+    leftToRightView.id ="leftToRightView"
+    leftToRightView.textContent = "Read Left to Right"
+    leftToRightView.classList.add("button")
+
+    leftToRightView.onclick = () => {
+        let mangaContainer = document.querySelector("#mangaContainer")
+        let manhwaContainer = document.querySelector("#manhwaContainer")
+
+        leftToRightView.style.border = "2px solid #83d8fc"
+        leftToRightView.setAttribute("inView", "true")
+
+        document.querySelector("#upDownView").style.border = "none"
+        document.querySelector("#upDownView").setAttribute("inView", "false")
+
+        mangaContainer.style.display = "flex"
+        manhwaContainer.style.display = "none"
+    }
+
+    let navContainer = document.createElement("div")
+    navContainer.id = "navContainer"
+    let prevButton = document.createElement("button")
+    prevButton.id = "prevButton"
+    prevButton.textContent = "Prev"
+    prevButton.classList.add("button")
+    prevButton.style.width = '50%'
+    prevButton.style.textAlign = 'center'
+    
+    let nextButton = document.createElement("button")
+    nextButton.id = "nextButton"
+    nextButton.textContent = "Next"
+    nextButton.classList.add("button")
+    nextButton.style.width = '50%'
+    nextButton.style.textAlign = 'center'
+
+    navContainer.appendChild(prevButton)
+    navContainer.appendChild(nextButton)
+
+    function trySendMessage(message, sendResponse, stack=0){
+        try{
+            if (stack > 10) return
+            chrome.runtime.sendMessage(message, sendResponse)
+            return true;
+        }
+        catch (err){
+            console.log("failure to send message to service worker, trying again...")
+            setTimeout(()=>trySendMessage(message,sendResponse, stack++), 100)
+        }
+    }
+
+    const aTagOnClick = (location) => {
+        let result = trySendMessage('runMain', (response)=>{
+            console.log(response)
+        })
+
+        if (!result){
+            alert("Error navigating to next page, please close reader")
+            return
+        }
+
+        let orientation = { manga:false, manhwa: true }
+        if (document.querySelector("#leftToRightView").getAttribute("inView") == "true"){
+            orientation.manga = true
+            orientation.manhwa = false
+        }
+        
+        trySendMessage(orientation, (response)=>{
+            console.log(response)
+        })
+        window.location.href = location
+    }
+
+    const buttonOnClick = button => {
+        let result = trySendMessage('runMain', (response)=>{
+            console.log(response)
+        })
+
+        if (!result){
+            alert("Error navigating to next page, please close reader")
+            return
+        }
+
+        let orientation = { manga:false, manhwa: true }
+        if (document.querySelector("#leftToRightView").getAttribute("inView") == "true"){
+            orientation.manga = true
+            orientation.manhwa = false
+        }
+        
+        trySendMessage(orientation, (response)=>{
+            console.log(response)
+        })
+        try{
+            button.click()
+        }
+        catch(err){
+            alert("error navigating to next page, , please close reader")
+        }
+        
+    }
+
+    let navOptions = null
+    navOptions = grabNextAndPrev()
+    console.log("nav options: ", navOptions)
+    let success = navOptions != null
+
+    if (success && navOptions.type == 'A'){
+        prevButton.onclick = () => aTagOnClick(navOptions.prev)
+        nextButton.onclick = () => aTagOnClick(navOptions.next)
+    }
+    else if (success && navOptions.type == "BUTTON"){
+        prevButton.onclick = () => buttonOnClick(navOptions.prev)
+        nextButton.onclick = () => buttonOnClick(navOptions.next)
+    }
+
+    let closeReader = document.createElement("button")
+    closeReader.id = "closeReader"
+    closeReader.textContent = "Close Reader"
+    closeReader.classList.add("button")
+    
+    let openMenu = document.createElement("button")
+    openMenu.id = "openMenu"
+    openMenu.textContent = "open Menu"
+    openMenu.classList.add("button")
+    openMenu.style.cssText = `position:fixed; left:14px; bottom:14px; z-index:999999999;
+                          border-radius:999px; background:linear-gradient(160deg,#1b2a3a,#13202f);
+                          box-shadow:0 10px 25px rgba(0,0,0,.35); display:none;`
+
+    openMenu.onclick = () => {
+        let sidebar = document.querySelector("#sidebar")
+        sidebar.style.display = "flex"
+        let openMenuButton = document.querySelector("#openMenu")
+        openMenuButton.style.display = "none"
+    }
+
+    let closeMenu = document.createElement("button")
+    closeMenu.id = "closeMenu"
+    closeMenu.textContent = "Hide Menu"
+    closeMenu.classList.add("button")
+
+    closeMenu.onclick = () => {
+        let sidebar = document.querySelector("#sidebar")
+        sidebar.style.display = "none"
+        let openMenuButton = document.querySelector("#openMenu")
+        openMenuButton.style.display = "inline-flex"
+    }
+
+    closeReader.onclick = () => {
+        let mangaContainer = document.querySelector("#mangaContainer")
+        let manhwaContainer = document.querySelector("#manhwaContainer")
+
+        trySendMessage("closed", (response)=>{console.log(response)})
+
+        mangaContainer.remove()
+        manhwaContainer.remove()
+        let reader = document.querySelector("#reader")
+        let sidebar = document.querySelector("#sidebar")
+        reader.remove()
+        sidebar.remove()
+
+    }
+
+    sidebar.appendChild(header)
+    sidebar.appendChild(upDownView)
+    sidebar.appendChild(leftToRightView)
+    if (success){
+        sidebar.appendChild(navContainer)
+    }
+    sidebar.appendChild(closeMenu)
+    sidebar.appendChild(closeReader)
+    document.querySelector("#reader").appendChild(openMenu)
+
+    return sidebar
+    //document.body.appendChild(sidebar)
+}
+
 function blockPopups(){
     const targetNode = document.querySelector("html")
     const observer = new MutationObserver((mutationList, observer) => {
@@ -694,16 +905,13 @@ async function main(){
     container.classList.add('loading')
 
     console.log("creating sidebar...")
-    let sidebar = createSideBar()
+    let sidebar = createNewSideBar() // createSideBar()
     console.log("success!")
 
     console.log("appending to document...")
     console.log("appending sidebar...")
     container.appendChild(sidebar)
     console.log("success!")
-
-
-    await scrollToBottom()
 
     console.log("grabbing pages...")
     let pages = grabPages()
@@ -724,11 +932,11 @@ async function main(){
     window.scrollTo({ top: 0, left: 0 })
 
     console.log("creating manga container...")
-    let mangaContainer = createMangaImgs(pages)
+    let { mangaContainer, updatePages } = createMangaImgs(pages)
     console.log("success!")
 
     console.log("creating manhwa container...")
-    let manhwaContainer = createManhwaImgs(pages)
+    let { manhwaContainer, scrollArea } = createManhwaImgs(pages)
     console.log("success!")
 
     // let container = createContainer()
@@ -763,6 +971,21 @@ async function main(){
         if (result == 'manga'){
             document.querySelector("#leftToRightView").click()
         }
+    })
+
+    await scrollToBottom()
+    window.scrollTo(0,0)
+
+    let newPages = grabPages()
+    newPages = newPages.slice(pages.length) 
+
+    if (newPages.length === 0) return
+
+    updatePages(newPages)
+    newPages.forEach(img=>{
+        let newImg = createManhwaImgTag(img)
+        console.log("newImg", newImg)
+        scrollArea.appendChild(newImg);
     })
 
     blockPopups()

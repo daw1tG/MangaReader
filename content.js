@@ -335,13 +335,20 @@ function createStyleSheet(){
                                 left: 0;
                                 width: 100%;
                                 height: 100vh;
-                                background-color: ${cssVars.bg};
                                 opacity: 1;
                                 z-index: 99999999;
                                 display: flex;
                                 flex-direction: column;
                                 justify-content: center;
                                 align-items: center;
+                            }
+                            
+                            .light {
+                                background-color: ${cssVars.panel}
+                            }
+                            
+                            .dark {
+                                background-color: ${cssVars.bg};
                             }
 
                             .sidebar {
@@ -359,7 +366,6 @@ function createStyleSheet(){
                                 top: 0;
                                 left: 0;
                                 z-index: 999999999;
-                                background-color: ${cssVars.panel};                           
                             }
 
                             .button {
@@ -368,11 +374,35 @@ function createStyleSheet(){
                                 border-radius:14px; 
                                 padding:12px 14px;
                                 text-align:left;
-                                background:#0f1620; 
                                 color:${cssVars.text}; 
                                 cursor:pointer;
                                 font-weight:600;
                             }
+                            
+                            .navButton {
+                                width: 45%;
+                                margin-right: 5px;
+                                margin-left: 5px;
+                                text-align: center
+                            }
+                            
+                            .hidden {
+                                display:none;
+                            }
+
+                            .fixed {
+                                position:fixed;
+                                left:14px;
+                                bottom:14px;
+                                z-index:999999999;
+                            }
+                            
+                            .rounded {
+                                border-radius:999px;
+                                background:linear-gradient(160deg,#1b2a3a,#13202f);
+                                box-shadow: ${cssVars.shadow};                   
+                            }
+                            
                             
                             .header{
                                 font-size: 14px;
@@ -415,253 +445,11 @@ function createStyleSheet(){
     document.head.appendChild(styleSheet)
 }
 
-function createSideBar(){
-    let cssVars = {
-        bg: "#0b1016", // page background 
-        panel: "#121a23", // cards/panels 
-        accent: "#4da3ff", // accent color 
-        muted: "#9fb3c8", // secondary text 
-        text: "#e8f0f8", // primary text 
-        shadow: "0 10px 25px rgba(0,0,0,.35)",
-        radius: "18px"
-    }
-
-    let sidebar = document.createElement("aside")
-    sidebar.id = "sidebar"
-    sidebar.style.width = "260px"
-    sidebar.style.height = "720px"
-    sidebar.style.margin = "15px"
-    sidebar.style.flex = "0 0 260px"
-    sidebar.style.display = "flex"
-    sidebar.style.flexDirection = "column"
-    sidebar.style.borderRadius = cssVars.radius
-    sidebar.style.boxShadow = cssVars.shadow
-    sidebar.style.gap = "8px"
-    sidebar.style.padding = "14px"
-    sidebar.style.position = "fixed"
-    sidebar.style.top = "0"
-    sidebar.style.left = "0"
-    sidebar.style.zIndex = "999999999"
-    sidebar.style.backgroundColor = cssVars.panel
-
-    let header = document.createElement("h2")
-    header.id = "header"
-    header.textContent = "Layout Options"
-    header.style.fontSize = "14px"
-    header.style.letterSpacing = ".12em"
-    header.style.textTransform = "uppercase"
-    header.style.color = cssVars.muted
-    header.style.margin = "2px 6px 8px"
-
-    let upDownView = document.createElement("button")
-    upDownView.id = "upDownView"
-    upDownView.textContent = "Read Up and Down"
-    upDownView.style.cssText = `appearance:none; border:0; border-radius:14px; 
-                                padding:12px 14px; text-align:left;
-                                background:#0f1620; color:${cssVars.text}; 
-                                cursor:pointer; font-weight:600;`
-    upDownView.onclick = () => {
-        let mangaContainer = document.querySelector("#mangaContainer")
-        let manhwaContainer = document.querySelector("#manhwaContainer")
-
-        upDownView.style.border = "2px solid #83d8fc"
-        upDownView.setAttribute("inView", "true")
-        document.querySelector("#leftToRightView").style.border = "none"
-        document.querySelector("#leftToRightView").setAttribute("inView", "false")
-
-        mangaContainer.style.display = "none"
-        manhwaContainer.style.display = "flex"
-    }
-
-    let leftToRightView = document.createElement("button")
-    leftToRightView.id ="leftToRightView"
-    leftToRightView.textContent = "Read Left to Right"
-    leftToRightView.style.cssText = `appearance:none; border:0; border-radius:14px; 
-                                padding:12px 14px; text-align:left;
-                                background:#0f1620; color:${cssVars.text}; 
-                                cursor:pointer; font-weight:600; border: 2px solid #83d8fc`
-    leftToRightView.onclick = () => {
-        let mangaContainer = document.querySelector("#mangaContainer")
-        let manhwaContainer = document.querySelector("#manhwaContainer")
-
-        leftToRightView.style.border = "2px solid #83d8fc"
-        leftToRightView.setAttribute("inView", "true")
-
-        document.querySelector("#upDownView").style.border = "none"
-        document.querySelector("#upDownView").setAttribute("inView", "false")
-
-        mangaContainer.style.display = "flex"
-        manhwaContainer.style.display = "none"
-    }
-
-    let navContainer = document.createElement("div")
-    navContainer.id = "navContainer"
-    let prevButton = document.createElement("button")
-    prevButton.id = "prevButton"
-    prevButton.textContent = "Prev"
-    prevButton.style.cssText = `appearance:none; border:0; border-radius:14px; 
-                                padding:12px 14px; text-align:left;
-                                background:#0f1620; color:${cssVars.text}; 
-                                cursor:pointer; font-weight:600; flex: 1;
-                                width: 50%; text-align: center;`
-    
-    let nextButton = document.createElement("button")
-    nextButton.id = "nextButton"
-    nextButton.textContent = "Next"
-    nextButton.style.cssText = `appearance:none; border:0; border-radius:14px; 
-                                padding:12px 14px; text-align:left;
-                                background:#0f1620; color:${cssVars.text}; 
-                                cursor:pointer; font-weight:600; flex: 1;
-                                width: 50%; text-align: center;`
-    navContainer.appendChild(prevButton)
-    navContainer.appendChild(nextButton)
-
-    function trySendMessage(message, sendResponse, stack=0){
-        try{
-            if (stack > 10) return
-            chrome.runtime.sendMessage(message, sendResponse)
-            return true;
-        }
-        catch (err){
-            console.log("failure to send message to service worker, trying again...")
-            setTimeout(()=>trySendMessage(message,sendResponse, stack++), 100)
-        }
-    }
-
-    const aTagOnClick = (location) => {
-        let result = trySendMessage('runMain', (response)=>{
-            console.log(response)
-        })
-
-        if (!result){
-            alert("Error navigating to next page, please close reader")
-            return
-        }
-
-        let orientation = { manga:false, manhwa: true }
-        if (document.querySelector("#leftToRightView").getAttribute("inView") == "true"){
-            orientation.manga = true
-            orientation.manhwa = false
-        }
-        
-        trySendMessage(orientation, (response)=>{
-            console.log(response)
-        })
-        window.location.href = location
-    }
-
-    const buttonOnClick = button => {
-        let result = trySendMessage('runMain', (response)=>{
-            console.log(response)
-        })
-
-        if (!result){
-            alert("Error navigating to next page, please close reader")
-            return
-        }
-
-        let orientation = { manga:false, manhwa: true }
-        if (document.querySelector("#leftToRightView").getAttribute("inView") == "true"){
-            orientation.manga = true
-            orientation.manhwa = false
-        }
-        
-        trySendMessage(orientation, (response)=>{
-            console.log(response)
-        })
-        try{
-            button.click()
-        }
-        catch(err){
-            alert("error navigating to next page, , please close reader")
-        }
-        
-    }
-
-    let navOptions = null
-    navOptions = grabNextAndPrev()
-    console.log("nav options: ", navOptions)
-    let success = navOptions != null
-
-    if (success && navOptions.type == 'A'){
-        prevButton.onclick = () => aTagOnClick(navOptions.prev)
-        nextButton.onclick = () => aTagOnClick(navOptions.next)
-    }
-    else if (success && navOptions.type == "BUTTON"){
-        prevButton.onclick = () => buttonOnClick(navOptions.prev)
-        nextButton.onclick = () => buttonOnClick(navOptions.next)
-    }
-
-    let closeReader = document.createElement("button")
-    closeReader.id = "closeReader"
-    closeReader.textContent = "Close Reader"
-    closeReader.style.cssText = `appearance:none; border:0; border-radius:14px; 
-                                padding:12px 14px; text-align:left;
-                                background:#0f1620; color:${cssVars.text}; 
-                                cursor:pointer; font-weight:600;`
-    
-    let openMenu = document.createElement("button")
-    openMenu.id = "openMenu"
-    openMenu.textContent = "open Menu"
-    openMenu.style.cssText = `position:fixed; left:14px; bottom:14px; z-index:999999999;
-                              appearance:none; border:0; border-radius:999px; padding:12px 16px; font-weight:700; cursor:pointer;
-                              background:linear-gradient(160deg,#1b2a3a,#13202f); color:${cssVars.text}; box-shadow:${cssVars.shadow};
-                              display:none;`
-
-    openMenu.onclick = () => {
-        let sidebar = document.querySelector("#sidebar")
-        sidebar.style.display = "flex"
-        let openMenuButton = document.querySelector("#openMenu")
-        openMenuButton.style.display = "none"
-    }
-
-    let closeMenu = document.createElement("button")
-    closeMenu.id = "closeMenu"
-    closeMenu.textContent = "Hide Menu"
-    closeMenu.style.cssText =  `appearance:none; border:0; border-radius:14px; 
-                                padding:12px 14px; text-align:left;
-                                background:#0f1620; color:${cssVars.text}; 
-                                cursor:pointer; font-weight:600;`
-    closeMenu.onclick = () => {
-        let sidebar = document.querySelector("#sidebar")
-        sidebar.style.display = "none"
-        let openMenuButton = document.querySelector("#openMenu")
-        openMenuButton.style.display = "inline-flex"
-    }
-
-    closeReader.onclick = () => {
-        let mangaContainer = document.querySelector("#mangaContainer")
-        let manhwaContainer = document.querySelector("#manhwaContainer")
-
-        trySendMessage("closed", (response)=>{console.log(response)})
-
-        mangaContainer.remove()
-        manhwaContainer.remove()
-        let reader = document.querySelector("#reader")
-        let sidebar = document.querySelector("#sidebar")
-        reader.remove()
-        sidebar.remove()
-
-    }
-
-    sidebar.appendChild(header)
-    sidebar.appendChild(upDownView)
-    sidebar.appendChild(leftToRightView)
-    if (success){
-        sidebar.appendChild(navContainer)
-    }
-    sidebar.appendChild(closeMenu)
-    sidebar.appendChild(closeReader)
-    document.querySelector("#reader").appendChild(openMenu)
-
-    return sidebar
-    //document.body.appendChild(sidebar)
-}
-
 function createNewSideBar(){
     let sidebar = document.createElement("aside")
     sidebar.id = "sidebar"
     sidebar.classList.add("sidebar")
+    sidebar.classList.add('light')
 
     let header = document.createElement("h2")
     header.id = "header"
@@ -672,6 +460,7 @@ function createNewSideBar(){
     upDownView.id = "upDownView"
     upDownView.textContent = "Read Up and Down"
     upDownView.classList.add("button")
+    upDownView.classList.add('dark')
 
     upDownView.onclick = () => {
         let mangaContainer = document.querySelector("#mangaContainer")
@@ -690,6 +479,7 @@ function createNewSideBar(){
     leftToRightView.id ="leftToRightView"
     leftToRightView.textContent = "Read Left to Right"
     leftToRightView.classList.add("button")
+    leftToRightView.classList.add('dark')
 
     leftToRightView.onclick = () => {
         let mangaContainer = document.querySelector("#mangaContainer")
@@ -711,15 +501,16 @@ function createNewSideBar(){
     prevButton.id = "prevButton"
     prevButton.textContent = "Prev"
     prevButton.classList.add("button")
-    prevButton.style.width = '50%'
-    prevButton.style.textAlign = 'center'
+    prevButton.classList.add('dark')
+    prevButton.classList.add('navButton')
+    
     
     let nextButton = document.createElement("button")
     nextButton.id = "nextButton"
     nextButton.textContent = "Next"
     nextButton.classList.add("button")
-    nextButton.style.width = '50%'
-    nextButton.style.textAlign = 'center'
+    nextButton.classList.add('dark')
+    nextButton.classList.add('navButton')
 
     navContainer.appendChild(prevButton)
     navContainer.appendChild(nextButton)
@@ -804,32 +595,38 @@ function createNewSideBar(){
     closeReader.id = "closeReader"
     closeReader.textContent = "Close Reader"
     closeReader.classList.add("button")
+    closeReader.classList.add('dark')
     
     let openMenu = document.createElement("button")
     openMenu.id = "openMenu"
     openMenu.textContent = "open Menu"
     openMenu.classList.add("button")
-    openMenu.style.cssText = `position:fixed; left:14px; bottom:14px; z-index:999999999;
-                          border-radius:999px; background:linear-gradient(160deg,#1b2a3a,#13202f);
-                          box-shadow:0 10px 25px rgba(0,0,0,.35); display:none;`
+    openMenu.classList.add('light')
+    openMenu.classList.add('rounded')
+    openMenu.classList.add('fixed')
+    openMenu.classList.add('hidden')
+    // openMenu.style.cssText = `position:fixed; left:14px; bottom:14px; z-index:999999999;
+    //                       border-radius:999px; background:linear-gradient(160deg,#1b2a3a,#13202f);
+    //                       box-shadow:0 10px 25px rgba(0,0,0,.35); display:none;`
 
     openMenu.onclick = () => {
         let sidebar = document.querySelector("#sidebar")
         sidebar.style.display = "flex"
-        let openMenuButton = document.querySelector("#openMenu")
-        openMenuButton.style.display = "none"
+        // let openMenuButton = document.querySelector("#openMenu")
+        openMenu.classList.add('hidden')
     }
 
     let closeMenu = document.createElement("button")
     closeMenu.id = "closeMenu"
     closeMenu.textContent = "Hide Menu"
     closeMenu.classList.add("button")
+    closeMenu.classList.add('dark')
 
     closeMenu.onclick = () => {
         let sidebar = document.querySelector("#sidebar")
         sidebar.style.display = "none"
-        let openMenuButton = document.querySelector("#openMenu")
-        openMenuButton.style.display = "inline-flex"
+        // let openMenuButton = document.querySelector("#openMenu")
+        openMenu.classList.remove('hidden')
     }
 
     closeReader.onclick = () => {
@@ -903,6 +700,7 @@ async function main(){
 
     createStyleSheet()
     container.classList.add('loading')
+    container.classList.add('dark')
 
     console.log("creating sidebar...")
     let sidebar = createNewSideBar() // createSideBar()

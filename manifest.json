@@ -1,7 +1,7 @@
 {
     "name": "Manga Reader",
     "description": "This extension scrapes pages of manga/comic websites and reformats them for easy reading",
-    "version": "1.9.24",
+    "version": "1.9.25",
     "manifest_version": 3,
 
     "action": {

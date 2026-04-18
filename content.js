@@ -13,7 +13,6 @@ function grabPagesAlt(imgs){
     let pages = []
     imgs.forEach(img => {
         let alt = img.getAttribute("alt");
-        console.log("alt: ", alt)
         if (!alt){
             return;
         }
@@ -22,7 +21,7 @@ function grabPagesAlt(imgs){
 
             // get page number
             let pageNum = img.alt.match(/(page|chapter) \d\d?\d?/i)[0]
-            console.log(img.alt, ": ", pageNum)
+            // console.log(img.alt, ": ", pageNum)
 
             pageNum = pageNum.replace(/(page|chapter) /i, "")
             pageNum = parseInt(pageNum)
@@ -39,7 +38,6 @@ function grabPagesId(imgs){
 
     imgs.forEach(img => {
         let id = img.getAttribute("id");
-        console.log("id: ", id)
         if (!id){
             return;
         }
@@ -58,7 +56,6 @@ function grabPagesClass(imgs){
 
     imgs.forEach(img => {
         let class_ = img.getAttribute("class");
-        console.log("class_: ", class_)
         if (!class_){
             return;
         }
@@ -105,7 +102,7 @@ function grabNextAndPrev(){
 
     function recurse(element, calls){
         if (calls > 5) return null;
-        console.log(element)
+        // console.log(element)
 
         if (element.tagName == "BUTTON"){
             return element
@@ -136,7 +133,7 @@ function grabNextAndPrev(){
         // dissect href
         let match = a.href.match(/chapters?(-|\/)?\d\d?\d?\d?$/)
         if (match){
-            console.log(a)
+            // console.log(a)
             let newChapterNum = match[0].replace(/chapters?(-|\/)?/,"")
             newChapterNum = parseInt(newChapterNum)
 
@@ -635,6 +632,8 @@ function createNewSideBar(){
 
         trySendMessage("closed", (response)=>{console.log(response)})
 
+        showElements()
+
         mangaContainer.remove()
         manhwaContainer.remove()
         let reader = document.querySelector("#reader")
@@ -675,9 +674,7 @@ function blockPopups(){
 
 function scrollToBottom(){
     return new Promise((resolve, reject) => {
-        let divs =document.querySelectorAll('div')
-        let last = divs[divs.length-1]
-        last.scrollIntoView()
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
 
         const atBottom = ()=>{ return Math.abs(window.scrollY-document.body.scrollHeight) <= 1000}
 
@@ -686,12 +683,29 @@ function scrollToBottom(){
                 clearInterval(check)
                 resolve(true)
             }
-             window.scrollTo({ top: document.body.scrollHeight, left: 0 });
+            window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
         }, 50)
         
     })
 }
 
+function hideElements(){
+    document.body.childNodes.forEach(child => {
+        console.log('hiding:', child)
+        if (child && child.style && child?.id !== 'reader'){
+            child.classList.add('hidden')
+        }
+    })
+}
+
+function showElements(){
+    document.body.childNodes.forEach(child => {
+        console.log('hiding:', child)
+        if (child && child.style && child?.id !== 'reader'){
+            child.classList.remove('hidden')
+        }
+    })
+}
 
 async function main(){
     let container = createContainer()
@@ -737,19 +751,6 @@ async function main(){
     let { manhwaContainer, scrollArea } = createManhwaImgs(pages)
     console.log("success!")
 
-    // let container = createContainer()
-    // container.id = "reader"
-    // document.body.appendChild(container)
-
-    // console.log("creating sidebar...")
-    // let sidebar = createSideBar()
-    // console.log("success!")
-
-    // console.log("appending to document...")
-    // console.log("appending sidebar...")
-    // container.appendChild(sidebar)
-    // console.log("success!")
-
     console.log("appending mangaContainer...")
     container.appendChild(mangaContainer)
     mangaContainer.style.display = "none"
@@ -771,11 +772,14 @@ async function main(){
         }
     })
 
+    console.log('loading all imgs')
     await scrollToBottom()
-    window.scrollTo(0,0)
 
     let newPages = grabPages()
     newPages = newPages.slice(pages.length) 
+
+    hideElements()
+    blockPopups()
 
     if (newPages.length === 0) return
 
@@ -785,8 +789,6 @@ async function main(){
         console.log("newImg", newImg)
         scrollArea.appendChild(newImg);
     })
-
-    blockPopups()
 }
 
 main()

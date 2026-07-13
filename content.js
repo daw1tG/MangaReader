@@ -69,6 +69,8 @@ function grabPagesClass(imgs){
     return pages.length > 0 ? pages:false;
 }
 
+// simple regex that matches html tags --> /<(?:\/?\w*(?:\s?[^<>])*)>/g
+
 function grabPagesSrc(imgs){
     let pages = []
 
@@ -114,26 +116,16 @@ function grabNextAndPrev(){
 
     let possibleATag = document.querySelectorAll("a")
     possibleATag.forEach((a)=>{
-        // // check if already found
-        // if (next != null && prev != null) return;
-
-        // // check for obvious attribute identifyer <-- sometimes grabs the latest chapter, depending on the site
-        // let cleaned = a.outerHTML.replace(a.innerHTML, "")
-        // if (cleaned.match(/next/i)){
-        //     next = a.href
-        //     type = 'A'
-        //     return
-        // }
-        // else if (cleaned.match(/prev/i)){
-        //     prev = a.href
-        //     type = "A"
-        //     return
-        // }
-
-        // dissect href
-        let match = a.href.match(/chapters?(-|\/)?\d\d?\d?\d?$/)
-        if (match){
-            // console.log(a)
+        if(!next && a.textContent.match(/next/i)){
+            next = a.href
+            type = "A"
+        }
+        else if(!prev && a.textContent.match(/prev/i)){
+            prev = a.href
+            type = "A"
+        }
+        else if (/chapters?(-|\/)?\d\d?\d?\d?$/.test(a.href)){
+            let match = a.href.match(/chapters?(-|\/)?\d\d?\d?\d?$/)
             let newChapterNum = match[0].replace(/chapters?(-|\/)?/,"")
             newChapterNum = parseInt(newChapterNum)
 
@@ -184,11 +176,32 @@ function grabNextAndPrev(){
         }
     })
 
+    // check button onclick events (sketchy)
+    document.querySelectorAll('button').forEach(button =>{
+        if (!next && /next/i.test(button.getAttribute('onclick'))){
+            next = button
+            type = "BUTTON"
+        }
+        else if (!prev && /prev/i.test(button.getAttribute('onclick'))){
+            prev = button
+            type = "BUTTON"
+        }
+    })
+
     if (type == null){
         console.log("no navigation found")
     }
 
     return { prev: prev, next: next, type: type }
+}
+
+function createMangaImg(src){
+    const img = document.createElement("img")
+    img.style.height = "100%"
+    img.style.width = "auto"
+    img.src = src
+
+    return img
 }
 
 function createMangaImgs(pages){
@@ -313,6 +326,7 @@ function createContainer(){
 
     return container
 }
+
 function createStyleSheet(){
     let cssVars = {
         bg: "#0b1016", // page background 
@@ -547,6 +561,7 @@ function createNewSideBar(){
     }
 
     const buttonOnClick = button => {
+        showElements()
         let result = trySendMessage('runMain', (response)=>{
             console.log(response)
         })
@@ -632,7 +647,8 @@ function createNewSideBar(){
 
         trySendMessage("closed", (response)=>{console.log(response)})
 
-        showElements()
+        //showElements()
+	location.reload()
 
         mangaContainer.remove()
         manhwaContainer.remove()
@@ -673,15 +689,19 @@ function blockPopups(){
 }
 
 function scrollToBottom(){
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
 
         const atBottom = ()=>{ return Math.abs(window.scrollY-document.body.scrollHeight) <= 1000}
 
-        const check = setInterval(()=>{
+        const check = setInterval(async ()=>{
             if (atBottom()){
-                clearInterval(check)
-                resolve(true)
+                // add delay for safety
+                await new Promise(r => setTimeout(r, 1000))
+                if (atBottom()){
+                    clearInterval(check)
+                    resolve(true)
+                }
             }
             window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
         }, 50)
@@ -707,6 +727,198 @@ function showElements(){
     })
 }
 
+/**
+ * Creates a self-contained progress-ring loading animation.
+ *
+ * A gray "track" ring is always visible; a light-blue progress ring
+ * sweeps clockwise on top of it until it fully covers the track,
+ * at which point `onComplete` (if provided) is called once.
+ *
+ * The animation only advances while the element is on screen. If the
+ * element is scrolled off screen *before* it finishes, the progress
+ * resets fully to 0 — it does not just pause. Once complete, scrolling
+ * off screen has no effect (it stays finished) unless you call `restart()`.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.durationSeconds=1.5] - time for the ring to go from empty to full
+ * @param {number} [options.size=80] - diameter of the loader in px
+ * @param {string} [options.text="Next"] - text shown in the center
+ * @param {Function|null} [options.onComplete=null] - called once when the ring finishes filling
+ * @returns {{
+*   element: HTMLDivElement,
+*   setDuration: (seconds: number) => void,
+*   setText: (text: string) => void,
+*   restart: () => void,
+*   destroy: () => void
+* }}
+*/
+function createNextLoader({
+   durationSeconds = 1.5,
+   size = 80,
+   text = "Next",
+   onComplete = null
+} = {}) {
+   const cssVars = {
+       bg: "#0b1016",
+       panel: "#121a23",
+       accent: "#4da3ff",
+       muted: "#9fb3c8",
+       text: "#e8f0f8",
+       shadow: "0 10px 25px rgba(0,0,0,.35)",
+       radius: "18px"
+   }
+
+   const strokeWidth = 6
+   const radius = size / 2 - strokeWidth / 2
+   const circumference = 2 * Math.PI * radius
+
+   // outer card, styled like your .panel / .rounded elements
+   const wrapper = document.createElement("div")
+   wrapper.classList.add("nextLoader")
+   wrapper.style.display = "flex"
+   wrapper.style.alignItems = "center"
+   wrapper.style.justifyContent = "center"
+   wrapper.style.width = `${size + 32}px`
+   wrapper.style.height = `${size + 32}px`
+   wrapper.style.padding = "16px"
+   wrapper.style.borderRadius = cssVars.radius
+   wrapper.style.backgroundColor = cssVars.panel
+   wrapper.style.boxShadow = cssVars.shadow
+
+   // inner area holds the svg ring + centered label
+   const spinArea = document.createElement("div")
+   spinArea.style.position = "relative"
+   spinArea.style.width = `${size}px`
+   spinArea.style.height = `${size}px`
+   spinArea.style.display = "flex"
+   spinArea.style.alignItems = "center"
+   spinArea.style.justifyContent = "center"
+
+   const svgNS = "http://www.w3.org/2000/svg"
+   const svg = document.createElementNS(svgNS, "svg")
+   svg.setAttribute("width", size)
+   svg.setAttribute("height", size)
+   svg.style.position = "absolute"
+   svg.style.top = "0"
+   svg.style.left = "0"
+   svg.style.transform = "rotate(-90deg)" // start the sweep at 12 o'clock
+
+   const trackCircle = document.createElementNS(svgNS, "circle")
+   trackCircle.setAttribute("cx", size / 2)
+   trackCircle.setAttribute("cy", size / 2)
+   trackCircle.setAttribute("r", radius)
+   trackCircle.setAttribute("fill", "none")
+   trackCircle.setAttribute("stroke", "rgba(159,179,200,0.25)") // muted gray track
+   trackCircle.setAttribute("stroke-width", strokeWidth)
+
+   const progressCircle = document.createElementNS(svgNS, "circle")
+   progressCircle.setAttribute("cx", size / 2)
+   progressCircle.setAttribute("cy", size / 2)
+   progressCircle.setAttribute("r", radius)
+   progressCircle.setAttribute("fill", "none")
+   progressCircle.setAttribute("stroke", cssVars.accent)
+   progressCircle.setAttribute("stroke-width", strokeWidth)
+   progressCircle.setAttribute("stroke-linecap", "round")
+   progressCircle.setAttribute("stroke-dasharray", circumference)
+   progressCircle.setAttribute("stroke-dashoffset", circumference) // fully empty
+
+   svg.appendChild(trackCircle)
+   svg.appendChild(progressCircle)
+
+   const label = document.createElement("span")
+   label.textContent = text
+   label.style.color = cssVars.text
+   label.style.fontWeight = "600"
+   label.style.fontSize = "13px"
+   label.style.letterSpacing = ".08em"
+   label.style.textTransform = "uppercase"
+   label.style.zIndex = "1"
+   label.style.position = "relative"
+
+   spinArea.appendChild(svg)
+   spinArea.appendChild(label)
+   wrapper.appendChild(spinArea)
+
+   // --- animation state ---
+   let startTime = null
+   let progress = 0        // 0 to 1
+   let rafId = null
+   let completed = false
+
+   function draw() {
+       progressCircle.setAttribute("stroke-dashoffset", circumference * (1 - progress))
+   }
+
+   function step(timestamp) {
+       if (startTime === null) startTime = timestamp
+       const elapsed = timestamp - startTime
+       progress = Math.min(elapsed / (durationSeconds * 1000), 1)
+       draw()
+
+       if (progress < 1) {
+           rafId = requestAnimationFrame(step)
+       } else {
+           completed = true
+           rafId = null
+           if (typeof onComplete === "function") onComplete()
+       }
+   }
+
+   function start() {
+       if (completed || rafId !== null) return
+       rafId = requestAnimationFrame(step)
+   }
+
+   function resetProgress() {
+       if (rafId !== null) {
+           cancelAnimationFrame(rafId)
+           rafId = null
+       }
+       startTime = null
+       progress = 0
+       draw()
+   }
+
+   // only advance while on screen; reset fully if scrolled off mid-load
+   const observer = new IntersectionObserver((entries) => {
+       entries.forEach(entry => {
+           if (completed) return
+           if (entry.isIntersecting) {
+               start()
+           } else {
+               resetProgress()
+           }
+       })
+   }, { threshold: 0.50 })
+   observer.observe(wrapper)
+
+   function setDuration(seconds) {
+       if (rafId !== null && !completed) {
+           // re-anchor startTime so current progress carries over smoothly
+           startTime = performance.now() - progress * seconds * 1000
+       }
+       durationSeconds = seconds
+   }
+
+   function setText(newText) {
+       label.textContent = newText
+   }
+
+   function restart() {
+       completed = false
+       resetProgress()
+       start()
+   }
+
+   function destroy() {
+       observer.disconnect()
+       if (rafId !== null) cancelAnimationFrame(rafId)
+       wrapper.remove()
+   }
+
+   return { element: wrapper, setDuration, setText, restart, destroy }
+}
+
 async function main(){
     let container = createContainer()
     container.id = "reader"
@@ -717,7 +929,7 @@ async function main(){
     container.classList.add('dark')
 
     console.log("creating sidebar...")
-    let sidebar = createNewSideBar() // createSideBar()
+    let sidebar = createNewSideBar() 
     console.log("success!")
 
     console.log("appending to document...")
@@ -781,7 +993,17 @@ async function main(){
     hideElements()
     blockPopups()
 
-    if (newPages.length === 0) return
+    const addLoader = args => {
+        console.log('adding next page loader')
+        const loader = createNextLoader(args)
+        loader.element.style.width = '400px'
+        document.querySelector("#scrollArea").appendChild(loader.element)
+    }
+
+    if (newPages.length === 0){
+        addLoader({onComplete:()=>document.querySelector('#nextButton').click()})
+        return
+    }
 
     updatePages(newPages)
     newPages.forEach(img=>{
@@ -789,6 +1011,8 @@ async function main(){
         console.log("newImg", newImg)
         scrollArea.appendChild(newImg);
     })
+
+    addLoader({onComplete:()=>document.querySelector('#nextButton').click()})
 }
 
 main()

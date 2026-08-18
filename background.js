@@ -22,9 +22,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		})
 		return true;
 	}
-	else if (message == 'orientation'){
-		chrome.storage.session.get(['orientation']).then(result => {
-			sendResponse(result.orientation)
+	else if (message == 'settings'){
+		chrome.storage.session.get(['orientation', 'menu']).then(result => {
+			sendResponse(result)
+		})
+		return true
+	}
+	else if (message == 'menu closed'){
+		chrome.storage.session.set({ menu: false })
+		chrome.storage.session.get(["menu"]).then(result =>{
+			sendResponse(`menu: ${result}`)
+		})
+		return true;
+	}
+	else if (message == 'menu opened'){
+		chrome.storage.session.set({ menu: true })
+		chrome.storage.session.get(["menu"]).then(result =>{
+			sendResponse(`menu: ${result}`)
+		})
+		return true;
+	}
+	else if (message == 'menu'){
+		chrome.storage.session.get(['menu']).then(result => {
+			sendResponse(result.menu)
 		})
 		return true
 	}

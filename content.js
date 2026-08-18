@@ -70,7 +70,6 @@ function grabPagesClass(imgs){
 }
 
 // simple regex that matches html tags --> /<(?:\/?\w*(?:\s?[^<>])*)>/g
-
 function grabPagesSrc(imgs){
     let pages = []
 
@@ -195,11 +194,12 @@ function grabNextAndPrev(){
     return { prev: prev, next: next, type: type }
 }
 
-function createMangaImg(src){
+function createMangaImg({src, alt}){
     const img = document.createElement("img")
     img.style.height = "100%"
     img.style.width = "auto"
     img.src = src
+    img.alt = alt
 
     return img
 }
@@ -243,10 +243,16 @@ function createMangaImgs(pages){
             img.src = pages[index].src
             img.alt = pages[index].alt
         }
+        else if (event.key == "ArrowLeft" && index == 0){
+            document.querySelector('#prevButton').click()
+        }
         else if (event.key == "ArrowRight" && index < pages.length - 1){
             index += 1
             img.src = pages[index].src
             img.alt = pages[index].alt
+        }
+        else if (event.key == "ArrowRight" && index >= pages.length - 1){
+            document.querySelector('#nextButton').click()
         }
 
         pageCounter.textContent = updatePageCount(index+1, pages.length)
@@ -626,6 +632,8 @@ function createNewSideBar(){
         sidebar.style.display = "flex"
         // let openMenuButton = document.querySelector("#openMenu")
         openMenu.classList.add('hidden')
+
+        trySendMessage("menu opened", (response)=>{console.log(response)})
     }
 
     let closeMenu = document.createElement("button")
@@ -639,6 +647,8 @@ function createNewSideBar(){
         sidebar.style.display = "none"
         // let openMenuButton = document.querySelector("#openMenu")
         openMenu.classList.remove('hidden')
+
+        trySendMessage("menu closed", (response)=>{console.log(response)})
     }
 
     closeReader.onclick = () => {
@@ -697,7 +707,7 @@ function scrollToBottom(){
         const check = setInterval(async ()=>{
             if (atBottom()){
                 // add delay for safety
-                await new Promise(r => setTimeout(r, 1000))
+                await new Promise(r => setTimeout(r, 2000))
                 if (atBottom()){
                     clearInterval(check)
                     resolve(true)
@@ -977,10 +987,13 @@ async function main(){
 
     document.querySelector("#upDownView").click()
 
-    chrome.runtime.sendMessage('orientation', result => {
-        console.log("orientation: ", result)
-        if (result == 'manga'){
+    chrome.runtime.sendMessage('settings', result => {
+        console.log("settings: ", result)
+        if (result.orientation == 'manga'){
             document.querySelector("#leftToRightView").click()
+        }
+        if(!result.menu){
+            document.querySelector("#closeMenu").click()
         }
     })
 
